@@ -1,0 +1,117 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <script type="text/javascript" src="Scripts/jquery-3.5.1.min.js">
+
+    </script>
+    <script type="text/javascript" src="Scripts/bootstrap.bundle.min.js"></script>
+    <link type="text/css" media="all" rel="stylesheet" href="Content/bootstrap.min.css"/>
+    <style type="text/css" media="screen">
+        .branch{padding-left:10px;cursor:pointer;}
+        .branch a:hover{text-decoration:underline;}
+    </style>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            TaxonEditor.load();
+        });
+        let TaxonEditor = {
+            load: function () {
+                $.ajax({
+                    url: 'taxonomy.json',
+                    method:'GET',
+                    dataType:'json',
+                    success: function (data) {
+                        TaxonEditor.build(data);
+                    }
+                })
+            },
+            build: function (data) {
+                let root = data.taxon;
+                let mode = data.selectionMode;
+                $.each(root.taxon, function () {
+                    let b = TaxonEditor.branch(this,mode);
+                    $('.taxonomy-container').append(b);
+                })
+            },
+            branch: function (t, mode) {
+                let b = $(`<div class="branch" data-id="${t.id}" data-info="${JSON.stringify(t.info).replace(/\"/g,"'")}"><a> ${ t.info.name }</a></div >`);
+                if (typeof (t.taxon) !== 'undefined') {
+                    if (Array.isArray(t.taxon)) {
+                        $.each(t.taxon, function () {
+                            let c = TaxonEditor.branch(this);
+                            b.append(c);
+                        });
+                    } else {
+                        let c = TaxonEditor.branch(t.taxon);
+                        b.append(c);
+                    }
+                }
+                b.on('click', function (event) {
+                    event.stopPropagation();
+                    console.log($(this).data().id);
+                    let info = $(this).data().info;
+                    let id = $(this).data().id;
+                    info = JSON.parse(info.replace(/'/g, "\""));
+                    console.log(info);
+                    let infoContainer = $('.taxon-info');
+                    infoContainer.html('');
+                    let form = $(`<div><label>Name: </label> <span class='taxon-name' data-node="${id}" contenteditable>${info.name}</span></div>` +
+                        `<div><label>Description</label><span class='taxon-description' data-node="${id}" contenteditable>${info.description}</span></div>`);
+
+                    let nameInput = form.find('.taxon-name');
+                    nameInput.on('keyup', function () {
+                        let id = $(this).data().node;
+                        let node = $(`div.branch[data-id="${id}"]`);
+
+                        let info = node.data().info;
+                        info = JSON.parse(info.replace(/'/g, "\""));
+
+                        let text = $(this).text();
+                        node.text(text);
+                        info.name = text;
+                        node.data('info', JSON.stringify(info));
+
+                    });
+                    let descInput = form.find('.taxon-description');
+                    descInput.on('keyup', function () {
+                        let id = $(this).data().node;
+                        let node = $(`div.branch[data-id="${id}"]`);
+
+                        let info = node.data().info;
+                        info = JSON.parse(info.replace(/'/g, "\""));
+
+                        let text = $(this).text();
+                        info.description = text;
+                        node.data('info', JSON.stringify(info));
+
+                    });
+
+                    infoContainer.append(form);
+
+                });
+                return b;
+            }
+                
+            
+
+        };
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Taxonomy</h1>
+        </header>
+        <main>
+           
+            <div class="row">
+                <div class="col-md-8 taxonomy-container"></div>
+                <div class="col-md-4 taxon-info">
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
